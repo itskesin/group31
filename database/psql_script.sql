@@ -6,8 +6,8 @@ DROP TABLE IF EXISTS Rate CASCADE;
 
 CREATE TABLE Users (
 uid         INTEGER,
-name        VARCHAR(255) 	NOT NULL,
-password    INTEGER       NOT NULL,
+name        VARCHAR(255)     NOT NULL,
+password    INTEGER          NOT NULL,
 PRIMARY KEY (uid)
 );
 
