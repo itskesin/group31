@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS Restaurant CASCADE;
+DROP TABLE IF EXISTS Restaurants CASCADE;
 DROP TABLE IF EXISTS Food CASCADE;
 DROP TABLE IF EXISTS Categories CASCADE;
 DROP TABLE IF EXISTS Menu CASCADE;
@@ -75,6 +75,7 @@ FOREIGN KEY (restaurantID, foodName) REFERENCES Menu (restaurantID, foodName) ON
 CREATE TABLE Users (
 uid         INTEGER,
 name        VARCHAR(255)     NOT NULL,
+username    VARCHAR(255)     NOT NULL,
 password    INTEGER          NOT NULL,
 PRIMARY KEY (uid)
 );
@@ -90,7 +91,6 @@ FOREIGN KEY (uid) REFERENCES Users ON DELETE CASCADE
 
 CREATE TABLE FDSManagers (
 uid         INTEGER,
-
 PRIMARY KEY (uid),
 FOREIGN KEY (uid) REFERENCES Users ON DELETE CASCADE
 );
@@ -102,10 +102,12 @@ FOREIGN KEY (uid) REFERENCES Users ON DELETE CASCADE
 );
 
 
-CREATE TABLE Rate (
+CREATE TABLE Place (
 uid            INTEGER,
+orderid        INTEGER,  
 review         VARCHAR(255)     NOT NULL,
 star           INTEGER      DEFAULT NULL CHECK (rating >= 0 AND rating <= 5), 
-PRIMARY KEY (uid),
+PRIMARY KEY (orderid),
 FOREIGN KEY (uid) REFERENCES Users ON DELETE CASCADE
+FOREIGN KEY (orderid) REFERENCES Orders ON DELETE CASCADE
 );
