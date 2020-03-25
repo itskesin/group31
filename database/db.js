@@ -4,7 +4,7 @@ async function initDatabase() {
     const pool = await new Pool({
         connectionString: process.env.DATABASE_URL
     });
-    if(pool == null) {
+    if (pool == null) {
         console.error("Cannot connect to db");
     }
     else {

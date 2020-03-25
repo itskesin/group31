@@ -8,7 +8,20 @@ DROP TABLE IF EXISTS Users CASCADE;
 DROP TABLE IF EXISTS Customers CASCADE;
 DROP TABLE IF EXISTS FDSManagers CASCADE;
 DROP TABLE IF EXISTS RestaurantStaff CASCADE;
-DROP TABLE IF EXISTS Rate CASCADE;
+DROP TABLE IF EXISTS Place CASCADE;
+DROP TABLE IF EXISTS Promotion CASCADE;
+DROP TABLE IF EXISTS RestPromo CASCADE;
+DROP TABLE IF EXISTS FdsPromo CASCADE;
+DROP TABLE IF EXISTS DeliveryRiders CASCADE;
+DROP TABLE IF EXISTS PartTime CASCADE;
+DROP TABLE IF EXISTS FullTime CASCADE;
+DROP TABLE IF EXISTS WorkingDays CASCADE;
+DROP TABLE IF EXISTS ShiftOptions CASCADE;
+DROP TABLE IF EXISTS WorkingWeeks CASCADE;
+DROP TABLE IF EXISTS MonthlyDeliveryBonus CASCADE;
+DROP TABLE IF EXISTS Promotion CASCADE;
+DROP TABLE IF EXISTS Restpromo CASCADE;
+DROP TABLE IF EXISTS FDSpromo CASCADE;
 
 
 CREATE TABLE Restaurants (
@@ -19,7 +32,7 @@ minThreshold    INTEGER DEFAULT '0'  NOT NULL,
 PRIMARY KEY (RestaurantID)
 );
 
-CREATE TABLE Food(
+CREATE TABLE Food (
 foodName        VARCHAR(100)         NOT NULL,
 availability    BOOLEAN              NOT NULL,
 price           INTEGER              NOT NULL,
@@ -109,5 +122,62 @@ review         VARCHAR(255)     NOT NULL,
 star           INTEGER      DEFAULT NULL CHECK (rating >= 0 AND rating <= 5), 
 PRIMARY KEY (orderid),
 FOREIGN KEY (uid) REFERENCES Users ON DELETE CASCADE
-FOREIGN KEY (orderid) REFERENCES Orders ON DELETE CASCADE
+FOREIGN KEY (orderid) REFERENCES Order ON DELETE CASCADE
+);
+
+/*Delivery Riders*/
+CREATE TABLE DeliveryRiders (
+    uid integer primary key references Users on delete cascade,
+	baseDeliveryFee integer NOT NULL
+);
+
+
+/*PartTime*/
+Create Table PartTime (
+	uid integer primary key references DeliveryRiders on delete cascade,
+	weeklyBasePay integer NOT NULL
+);
+
+/*FullTime*/
+Create Table FullTime (
+	uid  integer primary key references DeliveryRiders on delete cascade,
+	monthlyBasePay integer NOT NULL
+);
+
+/*WorkingDays - Used date and time datatypes without timezone*/
+Create Table  WorkingDays(
+	uid  integer,
+	workDate date NOT NULL,
+	intervalStart time NOT NULL,
+	intervalEnd time NOT NULL,
+	primary key (uid),
+	foreign key (uid) references PartTime on delete cascade
+);
+
+/*ShiftOptions*/
+Create Table ShiftOptions (
+	shiftID integer,
+	shiftDetails varchar(30) NOT NULL,
+	primary key (shiftID)
+);
+
+/*WorkingWeeks*/
+Create Table  WorkingWeeks (
+	uid  integer,
+	workDate date NOT NULL,
+	shiftID  integer NOT NULL,
+	primary key (uid),
+	foreign key (uid) references FullTime on delete cascade,
+	foreign key (shiftID) references ShiftOptions
+);
+
+
+/*MonthlyDeliveryBonus. monthYear will have bogus date*/
+Create Table MonthlyDeliveryBonus (
+	uid integer,
+	monthYear date NOT NULL,
+	numCompleted integer NOT NULL default 0,
+	deliveryBonus integer NOT NULL default 0,
+	primary key (uid),
+	foreign key (uid) references DeliveryRiders on delete cascade
 );
