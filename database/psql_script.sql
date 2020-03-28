@@ -1,3 +1,6 @@
+CREATE EXTENSION "pgcrypto";
+CREATE EXTENSION "btree_gist";
+
 DROP TABLE IF EXISTS Promotion CASCADE;
 DROP TABLE IF EXISTS FDSpromo CASCADE;
 DROP TABLE IF EXISTS Restaurants CASCADE;
@@ -22,8 +25,8 @@ DROP TABLE IF EXISTS WorkingWeeks CASCADE;
 DROP TABLE IF EXISTS MonthlyDeliveryBonus CASCADE;
 DROP TABLE IF EXISTS Delivers CASCADE; 
 
-CREATE TABLE Promotion (
-    promoID     INTEGER PRIMARY KEY,
+CREATE TABLE Promotion ( 
+    promoID     uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     startDate   DATE NOT NULL,
     endDate     DATE NOT NULL,
     discPerc    NUMERIC check(discPerc > 0),
@@ -31,13 +34,13 @@ CREATE TABLE Promotion (
 );
 
 CREATE TABLE FDSpromo (
-    promoID     INTEGER,
+    promoID     uuid,
     PRIMARY KEY (promoID),
     FOREIGN KEY (promoID) REFERENCES Promotion(promoID) ON DELETE CASCADE
 );
 
-CREATE TABLE Restaurants (
-	restaurantID    INTEGER,
+CREATE TABLE Restaurants ( 
+	restaurantID    uuid DEFAULT gen_random_uuid(),
 	name            VARCHAR(100)         NOT NULL,
 	location        VARCHAR(255)         NOT NUll,
 	minThreshold    INTEGER DEFAULT '0'  NOT NULL,
@@ -45,8 +48,8 @@ CREATE TABLE Restaurants (
 );
 
 CREATE TABLE Restpromo (
-    promoID     INTEGER, 
-    restID      INTEGER NOT NULL,
+    promoID     uuid, 
+    restID      uuid NOT NULL,
     PRIMARY KEY (promoID),
     FOREIGN KEY (promoID) REFERENCES Promotion(promoID) ON DELETE CASCADE,
     FOREIGN KEY (restID) REFERENCES Restaurants(restaurantID) ON DELETE CASCADE
@@ -59,10 +62,10 @@ CREATE TABLE Categories (
 
 CREATE TABLE Food (
 	foodName        VARCHAR(100)         NOT NULL,
-	availability    BOOLEAN              NOT NULL,
-	price           INTEGER              NOT NULL,
+	availability    INTEGER              NOT NULL,
+	price           NUMERIC              NOT NULL CHECK (price > 0),
 	dailyLimit      INTEGER DEFAULT '50' NOT NULL,
-	RestaurantID    INTEGER,
+	RestaurantID    uuid,
 	category        VARCHAR(255)		 NOT NULL,
 	PRIMARY KEY (RestaurantID, foodName),
 	FOREIGN KEY (RestaurantID) REFERENCES Restaurants (RestaurantID) ON DELETE CASCADE,
@@ -70,9 +73,11 @@ CREATE TABLE Food (
 );
 
 CREATE TABLE Menu (
-	restaurantID    INTEGER         NOT NULL,
+	restaurantID    uuid         NOT NULL,
 	foodName        VARCHAR(100)    NOT NULL,
-	PRIMARY KEY (restaurantID,foodName)
+	Unique (restaurantID, foodName),
+	FOREIGN KEY	(restaurantID) REFERENCES Restaurants (restaurantID) ON DELETE CASCADE,
+	FOREIGN KEY	(restaurantID, foodName) REFERENCES Food (restaurantID,foodname) ON DELETE CASCADE
 );
 
 CREATE TABLE PaymentOption (
@@ -81,15 +86,15 @@ CREATE TABLE PaymentOption (
 );
 
 CREATE TABLE Orders (
-	orderID             INTEGER                         NOT NULL,
-	deliveryFee         INTEGER                         NOT NULL,
-	cost                INTEGER                         NOT NULL,
-	location            VARCHAR(255)                    NOT NULL,
-	date                DATE                            NOT NULL,
-	payOption	    	VARCHAR(50)			    		NOT NULL,
-	orderStatus         VARCHAR(50) DEFAULT 'Pending'   NOT NULL CHECK (orderStatus in ('Pending','Confirmed','Completed')),
-	deliveryDuration    INTEGER     					NOT NULL,
-	timeOrderPlace      TIME,
+	orderID             uuid DEFAULT gen_random_uuid() NOT NULL,
+	deliveryFee         INTEGER                           NOT NULL,
+	cost                INTEGER                           NOT NULL,
+	location            VARCHAR(255)                      NOT NULL,
+	date                DATE                              NOT NULL,
+	payOption	    	VARCHAR(50)			    		  NOT NULL,
+	orderStatus         VARCHAR(50) DEFAULT 'Pending'     NOT NULL CHECK (orderStatus in ('Pending','Confirmed','Completed','Failed')),
+	deliveryDuration    INTEGER     					  NOT NULL,
+	timeOrderPlace      TIME DEFAULT Now(),
 	timeDepartToRest    TIME,
 	timeArriveRest      TIME,
 	timeDepartFromRest  TIME,
@@ -99,10 +104,10 @@ CREATE TABLE Orders (
 );
 
 CREATE TABLE FromMenu (
-	promotionID     INTEGER,
+	promotionID     uuid,
 	quantity        INTEGER         NOT NULL,
-	orderID         INTEGER         NOT NULL,
-	restaurantID    INTEGER         NOT NULL,
+	orderID         uuid         NOT NULL,
+	restaurantID    uuid         NOT NULL,
 	foodName        VARCHAR(100)    NOT NULL,
 	PRIMARY KEY (restaurantID,foodName,orderID),
 	FOREIGN KEY (promotionID) REFERENCES Restpromo (promoID),
@@ -111,7 +116,7 @@ CREATE TABLE FromMenu (
 );
 
 CREATE TABLE Users (
-	uid         INTEGER,
+	uid         uuid DEFAULT gen_random_uuid(),
 	name        VARCHAR(255)     NOT NULL,
 	username    VARCHAR(255)     NOT NULL,
 	password    VARCHAR(255)     NOT NULL,
@@ -120,60 +125,60 @@ CREATE TABLE Users (
 );
 
 CREATE TABLE Customers (
-	uid         INTEGER,
+	uid         uuid,
 	rewardPts   INTEGER DEFAULT '0' NOT NULL,
-	signUpDate  DATE    DEFAULT now() NOT NULL,
+	signUpDate  DATE    DEFAULT Now() NOT NULL,
 	cardDetails VARCHAR(255),
 	PRIMARY KEY (uid),
 	FOREIGN KEY (uid) REFERENCES Users ON DELETE CASCADE
 );
 
 CREATE TABLE FDSManagers (
-	uid         INTEGER,
+	uid         uuid,
 	PRIMARY KEY (uid),
 	FOREIGN KEY (uid) REFERENCES Users ON DELETE CASCADE
 );
 
 CREATE TABLE RestaurantStaff (
-	uid         INTEGER,
+	uid         uuid,
 	PRIMARY KEY (uid),
 	FOREIGN KEY (uid) REFERENCES Users ON DELETE CASCADE
 );
 
 
 CREATE TABLE Place (
-	uid            INTEGER,
-	orderid        INTEGER,  
+	uid            uuid,
+	orderid        uuid,  
 	review         VARCHAR(255)     NOT NULL,
 	star           INTEGER      DEFAULT NULL CHECK (star >= 0 AND star <= 5), 
-	promoid        INTEGER,
+	promoid        uuid,
 	PRIMARY KEY (orderid),
-	FOREIGN KEY (uid) REFERENCES Users ON DELETE CASCADE,
+	FOREIGN KEY (uid) REFERENCES Customers ON DELETE CASCADE,
 	FOREIGN KEY (promoID) REFERENCES FDSpromo(promoID) ON DELETE CASCADE,
 	FOREIGN KEY (orderid) REFERENCES Orders ON DELETE CASCADE
 );
 
-CREATE TABLE DeliveryRiders (
-    uid             INTEGER PRIMARY KEY,
-	baseDeliveryFee INTEGER NOT NULL,
+CREATE TABLE DeliveryRiders ( --includes salary field here?
+    uid             uuid PRIMARY KEY,
+	baseDeliveryFee NUMERIC NOT NULL DEFAULT 0, 
 	type    VARCHAR(255)  NOT NULL CHECK (type in ('FullTime', 'PartTime')),
     FOREIGN KEY (uid) REFERENCES Users(uid) ON DELETE CASCADE
 );
 
 CREATE TABLE PartTime (
-	uid             INTEGER PRIMARY KEY ,
-	weeklyBasePay   INTEGER NOT NULL,
+	uid             uuid PRIMARY KEY,
+	weeklyBasePay   NUMERIC NOT NULL DEFAULT 100, /* $10 times minimum 10 hours in each WWS*/
     FOREIGN KEY (uid) REFERENCES DeliveryRiders(uid) ON DELETE CASCADE
 );
 
 CREATE TABLE FullTime (
-	uid              INTEGER PRIMARY KEY ,
-	monthlyBasePay   INTEGER NOT NULL,
+	uid              uuid PRIMARY KEY,
+	monthlyBasePay   INTEGER NOT NULL DEFAULT 1800,
     FOREIGN KEY (uid) REFERENCES DeliveryRiders(uid) ON DELETE CASCADE
 );
 
 CREATE TABLE  WorkingDays(
-	uid             INTEGER,
+	uid             uuid,
 	workDate        DATE NOT NULL,
 	intervalStart   TIME NOT NULL,
 	intervalEnd     TIME NOT NULL,
@@ -182,13 +187,13 @@ CREATE TABLE  WorkingDays(
 );
 
 CREATE TABLE ShiftOptions (
-	shiftID         INTEGER,
+	shiftID         INTEGER, 
 	shiftDetails    VARCHAR(30) NOT NULL,
 	PRIMARY KEY (shiftID)
 );
 
 CREATE TABLE  WorkingWeeks (
-	uid             INTEGER,
+	uid             uuid,
 	workDate        DATE NOT NULL,
 	shiftID         INTEGER NOT NULL,
 	PRIMARY KEY (uid, workDate),
@@ -198,17 +203,17 @@ CREATE TABLE  WorkingWeeks (
 
 /*MonthlyDeliveryBonus. monthYear will have bogus date*/
 CREATE TABLE MonthlyDeliveryBonus (
-	uid             INTEGER,
+	uid            	uuid,
 	monthYear       DATE NOT NULL,
 	numCompleted    INTEGER NOT NULL default 0,
-	deliveryBonus   INTEGER NOT NULL default 0,
+	deliveryBonus   NUMERIC NOT NULL default 0,
 	PRIMARY KEY (uid, monthYear),
 	FOREIGN KEY (uid) REFERENCES DeliveryRiders(uid) ON DELETE CASCADE
 ); 
 
 CREATE TABLE Delivers (
-    orderID         INTEGER,
-    uid             INTEGER,
+    orderID         uuid,
+    uid             uuid,
     rating          INTEGER      DEFAULT NULL CHECK (rating >= 0 AND rating <= 5), 
     PRIMARY KEY (orderID,uid),
     FOREIGN KEY (orderID) REFERENCES Orders(orderID) ON DELETE CASCADE,
