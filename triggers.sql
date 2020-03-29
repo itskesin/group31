@@ -19,7 +19,7 @@ BEGIN
     IF qtyOrdered > currAvailability THEN
         RAISE NOTICE 'Exceed Daily Limit';
         UPDATE Orders SET orderStatus = 'Failed';
-        RETURN NULL; 
+        RETURN NULL; -- abort inserted row
     ELSE 
         UPDATE Orders SET orderStatus = 'Confirmed';
         RAISE NOTICE 'Order Confirmed';
@@ -289,3 +289,31 @@ CREATE TRIGGER promo_trigger
 AFTER INSERT ON Promotion
 FOR EACH ROW
 EXECUTE PROCEDURE check_promotion();
+
+
+
+/*Check restaurant staff account creation*/
+CREATE OR REPLACE FUNCTION check_reststaff()
+RETURNS TRIGGER AS $$
+DECLARE count NUMERIC;
+
+BEGIN
+    SELECT COUNT(*) INTO count 
+    FROM RestaurantStaff
+    WHERE RestaurantStaff.restaurantID = NEW.restaurantID;
+
+    IF (count < 0) THEN
+        RAISE NOTICE 'No Restaurant Staff Account Created'; 
+        RETURN NULL; -- abort inserted row
+    ELSE
+        RAISE NOTICE 'Restaurant Staff available';
+        RETURN NEW;
+    END IF;
+
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER add_rest_trigger
+BEFORE INSERT ON Restaurants
+FOR EACH ROW
+EXECUTE PROCEDURE check_reststaff();

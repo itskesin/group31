@@ -143,10 +143,12 @@ CREATE TABLE FDSManagers (
 	FOREIGN KEY (uid) REFERENCES Users ON DELETE CASCADE
 );
 
-CREATE TABLE RestaurantStaff (
+CREATE TABLE RestaurantStaff ( --not able to tell which restaurant this staff belongs to
 	uid         uuid,
+	restaurantID uuid, --
 	PRIMARY KEY (uid),
-	FOREIGN KEY (uid) REFERENCES Users ON DELETE CASCADE
+	FOREIGN KEY (uid) REFERENCES Users ON DELETE CASCADE,
+	FOREIGN KEY (restaurantID) REFERENCES Restaurants(restaurantID) ON DELETE CASCADE
 );
 
 
