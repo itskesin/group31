@@ -248,3 +248,44 @@ CREATE TRIGGER bonus_trigger
 AFTER UPDATE of orderStatus ON Orders
 FOR EACH ROW
 EXECUTE PROCEDURE update_bonus();
+
+
+/*ISA check for Promotion*/
+CREATE OR REPLACE FUNCTION check_promotion()
+RETURNS TRIGGER AS $$
+DECLARE count NUMERIC;
+
+BEGIN
+    IF (NEW.type = 'FDSpromo') THEN
+        SELECT COUNT(*) INTO count 
+        FROM Restpromo 
+        WHERE NEW.promoID = Restpromo.promoID;
+        IF (count > 0) THEN 
+            RETURN NULL;
+        ELSE
+            INSERT INTO FDSpromo VALUES (NEW.promoID);
+            RAISE NOTICE 'FDSpromo added';
+            RETURN NEW;
+        END IF;
+
+    ELSIF (NEW.type = 'Restpromo') THEN
+        SELECT COUNT(*) INTO count 
+        FROM FDSpromo
+        WHERE NEW.promoID = FDSpromo.promoID;
+
+        IF (count > 0) THEN 
+            RETURN NULL;
+        ELSE
+            INSERT INTO Restpromo VALUES (NEW.promoID, NEW.promoID);
+            RAISE NOTICE 'Restpromo added';
+            RETURN NEW;
+        END IF;
+    ELSE RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER promo_trigger
+AFTER INSERT ON Promotion
+FOR EACH ROW
+EXECUTE PROCEDURE check_promotion();

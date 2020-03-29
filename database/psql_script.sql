@@ -25,26 +25,30 @@ DROP TABLE IF EXISTS WorkingWeeks CASCADE;
 DROP TABLE IF EXISTS MonthlyDeliveryBonus CASCADE;
 DROP TABLE IF EXISTS Delivers CASCADE; 
 
-CREATE TABLE Promotion ( 
-    promoID     uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    startDate   DATE NOT NULL,
-    endDate     DATE NOT NULL,
-    discPerc    NUMERIC check(discPerc > 0),
-    discAmt     NUMERIC check(discAmt > 0)
-);
-
-CREATE TABLE FDSpromo (
-    promoID     uuid,
-    PRIMARY KEY (promoID),
-    FOREIGN KEY (promoID) REFERENCES Promotion(promoID) ON DELETE CASCADE
-);
-
 CREATE TABLE Restaurants ( 
 	restaurantID    uuid DEFAULT gen_random_uuid(),
 	name            VARCHAR(100)         NOT NULL,
 	location        VARCHAR(255)         NOT NUll,
 	minThreshold    INTEGER DEFAULT '0'  NOT NULL,
 	PRIMARY KEY (RestaurantID)
+);
+
+CREATE TABLE Promotion ( --
+    promoID     uuid  DEFAULT gen_random_uuid(),
+	restaurantID uuid,
+    startDate   DATE NOT NULL,
+    endDate     DATE NOT NULL,
+    discPerc    NUMERIC check(discPerc > 0),
+    discAmt     NUMERIC check(discAmt > 0),
+	type    	VARCHAR(255)  NOT NULL CHECK (type in ('FDSpromo', 'Restpromo')),
+	PRIMARY KEY (promoID),
+	FOREIGN KEY (restaurantID) REFERENCES Restaurants(restaurantID) ON DELETE CASCADE
+);
+
+CREATE TABLE FDSpromo (
+    promoID     uuid,
+    PRIMARY KEY (promoID),
+    FOREIGN KEY (promoID) REFERENCES Promotion(promoID) ON DELETE CASCADE
 );
 
 CREATE TABLE Restpromo (
@@ -73,7 +77,7 @@ CREATE TABLE Food (
 );
 
 CREATE TABLE Menu (
-	restaurantID    uuid         NOT NULL,
+	restaurantID    uuid        	NOT NULL,
 	foodName        VARCHAR(100)    NOT NULL,
 	Unique (restaurantID, foodName),
 	FOREIGN KEY	(restaurantID) REFERENCES Restaurants (restaurantID) ON DELETE CASCADE,
@@ -85,16 +89,16 @@ CREATE TABLE PaymentOption (
     PRIMARY KEY (payOption)
 );
 
-CREATE TABLE Orders (
-	orderID             uuid DEFAULT gen_random_uuid() NOT NULL,
+CREATE TABLE Orders ( --
+	orderID             uuid DEFAULT gen_random_uuid() 	  NOT NULL,
 	deliveryFee         INTEGER                           NOT NULL,
 	cost                INTEGER                           NOT NULL,
 	location            VARCHAR(255)                      NOT NULL,
-	date                DATE                              NOT NULL,
+	date                DATE DEFAULT CURRENT_DATE         NOT NULL,
 	payOption	    	VARCHAR(50)			    		  NOT NULL,
 	orderStatus         VARCHAR(50) DEFAULT 'Pending'     NOT NULL CHECK (orderStatus in ('Pending','Confirmed','Completed','Failed')),
 	deliveryDuration    INTEGER     					  NOT NULL,
-	timeOrderPlace      TIME DEFAULT Now(),
+	timeOrderPlace      TIME DEFAULT CURRENT_TIME,
 	timeDepartToRest    TIME,
 	timeArriveRest      TIME,
 	timeDepartFromRest  TIME,
@@ -127,7 +131,7 @@ CREATE TABLE Users (
 CREATE TABLE Customers (
 	uid         uuid,
 	rewardPts   INTEGER DEFAULT '0' NOT NULL,
-	signUpDate  DATE    DEFAULT Now() NOT NULL,
+	signUpDate  DATE    DEFAULT CURRENT_DATE NOT NULL,
 	cardDetails VARCHAR(255),
 	PRIMARY KEY (uid),
 	FOREIGN KEY (uid) REFERENCES Users ON DELETE CASCADE
@@ -177,7 +181,7 @@ CREATE TABLE FullTime (
     FOREIGN KEY (uid) REFERENCES DeliveryRiders(uid) ON DELETE CASCADE
 );
 
-CREATE TABLE  WorkingDays(
+CREATE TABLE  WorkingDays (
 	uid             uuid,
 	workDate        DATE NOT NULL,
 	intervalStart   TIME NOT NULL,
